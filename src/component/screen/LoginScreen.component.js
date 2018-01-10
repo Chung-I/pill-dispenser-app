@@ -10,6 +10,7 @@ import {
 import styles from 'src/style/main.style.js';
 import EmptyDOM from 'src/component/EmptyDOM.component.js';
 import UserListScreen from 'src/component/screen/UserListScreen.component.js';
+import AppConstants from 'src/constant/AppConstants.constant.js';
 
 if(typeof global.self === "undefined")
 {
@@ -39,7 +40,8 @@ class LoginScreen extends Component {
       username,
       password
     };
-    let res = await fetch("http://localhost:3000/api/auth/login/", {
+    console.log(AppConstants.SERVER_URL);
+    let res = await fetch(`${AppConstants.SERVER_URL}/api/auth/login/`, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json"

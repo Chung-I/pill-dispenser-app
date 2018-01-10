@@ -3,6 +3,7 @@ import { Text, View, TouchableOpacity, Image, Button, FlatList } from 'react-nat
 import styles from 'src/style/main.style.js';
 import io from 'socket.io-client';
 import SocketConnector from 'src/utility/SocketConnector.js';
+import AppConstants from 'src/constant/AppConstants.constant.js';
 
 class UserListScreen extends Component {
   constructor(props) {
@@ -20,7 +21,7 @@ class UserListScreen extends Component {
   componentDidMount = async () => {
     const naviParams = this.props.navigation.state.params;
     SocketConnector.emit('connect', naviParams.username);
-    let res = await fetch("http://localhost:3000/api/users");
+    let res = await fetch(`${AppConstants.SERVER_URL}/api/users`);
     let resJson = await res.json();
     this.setState({
         usernames: resJson,
@@ -51,9 +52,10 @@ class UserListScreen extends Component {
   }
 
   onLogout = async () => {
+    const naviParams = this.props.navigation.state.params;    
     SocketConnector.emit('disconnect', naviParams.username);    
     const body = this.state;    
-    let res = await fetch("http://localhost:3000/api/auth/logout/", {
+    let res = await fetch(`${AppConstants.SERVER_URL}/api/auth/logout/`, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json"

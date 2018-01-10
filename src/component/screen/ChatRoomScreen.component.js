@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import styles from "src/style/main.style.js";
 import EmptyDOM from "src/component/EmptyDOM.component.js";
+import AppConstants from 'src/constant/AppConstants.constant.js';
 
 if (typeof global.self === "undefined") {
   global.self = global;
@@ -24,11 +25,12 @@ class ChatRoomScreen extends Component {
       content: "",
       messages: []
     };
-    this.socket = this.props.navigation.state.params.SocketConnector;    
-    this.socket.on('message', this.onReceivedMessage);
+
   }
 
   componentDidMount = async () => {
+    this.socket = this.props.navigation.state.params.SocketConnector;    
+    this.socket.on('message', this.onReceivedMessage);
     const naviParams = this.props.navigation.state.params;
     let me = naviParams.me;
     let you = naviParams.you;
@@ -36,7 +38,7 @@ class ChatRoomScreen extends Component {
       me,
       you,
     });
-    let res = await fetch(`http://localhost:3000/api/message/${me}/${you}`);
+    let res = await fetch(`${AppConstants.SERVER_URL}/api/message/${me}/${you}`);
     let messages = await res.json();
     this.setState({
       messages

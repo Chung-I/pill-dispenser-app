@@ -1,12 +1,12 @@
 import SocketIOClient from 'socket.io-client';
-//import AppConstants from 'src/constant/AppConstants.constant.js';
+import AppConstants from 'src/constant/AppConstants.constant.js';
 class SocketConnector {
   constructor() {
     this.socket = null;
   }
 
   static startConnection = () => {
-    this.socket = SocketIOClient('http://localhost:3000');
+    this.socket = SocketIOClient(AppConstants.SERVER_URL);
   }
 
   static stopConnection = () => {
