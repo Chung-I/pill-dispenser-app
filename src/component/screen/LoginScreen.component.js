@@ -50,6 +50,7 @@ class LoginScreen extends Component {
       mode: "no-cors",
       body: JSON.stringify(body)
     });
+    console.log("authorizing");
     let resJson = await res.json();
     this.setState({ loginError: !resJson.success });
     if (resJson.success === true) {
@@ -64,7 +65,7 @@ class LoginScreen extends Component {
     return (
       <View style={styles.container}>
         <View style={[styles.header, styles.alignCenter]}>
-          <Text style={[styles.headerText]}>Let's Chat!</Text>
+          <Text style={[styles.headerText]}>Smart Pill Dispenser</Text>
         </View>
         <View style={[styles.main, styles.alignCenter]}>
           <TextInput
@@ -74,6 +75,8 @@ class LoginScreen extends Component {
             onChangeText={username => {
               this.setState({ username });
             }}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <TextInput
             style={[styles.playerTextInput]}
@@ -83,6 +86,8 @@ class LoginScreen extends Component {
             onChangeText={password => {
               this.setState({ password });
             }}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           {this.state.loginError ? <Text>Error: wrong password</Text> : null}
         </View>

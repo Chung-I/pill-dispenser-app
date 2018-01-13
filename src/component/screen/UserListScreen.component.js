@@ -10,8 +10,8 @@ class UserListScreen extends Component {
     super(props);
     this.state = {
       username: "",
-      usernames: [
-      ]
+      deviceNames: [
+      ],
     };
     SocketConnector.startConnection();
     SocketConnector.on('connect', this.onChangeStatus(true));
@@ -21,10 +21,10 @@ class UserListScreen extends Component {
   componentDidMount = async () => {
     const naviParams = this.props.navigation.state.params;
     SocketConnector.emit('connect', naviParams.username);
-    let res = await fetch(`${AppConstants.SERVER_URL}/api/users`);
+    let res = await fetch(`${AppConstants.SERVER_URL}/api/devices`);
     let resJson = await res.json();
     this.setState({
-        usernames: resJson,
+        deviceNames: resJson,
         username: naviParams.username
     });
   }
@@ -38,22 +38,23 @@ class UserListScreen extends Component {
 
   onChangeStatus = (status) => {
     let func = username => {
-      let usernames = this.state.usernames;
-      for (let i = 0; i < usernames.length; ++i) {
-        if (usernames[i].username == username) {
-          usernames[i].connected = status;
+      let deviceNames = this.state.deviceNames;
+      for (let i = 0; i < deviceNames.length; ++i) {
+        if (deviceNames[i].username == username) {
+          deviceNames[i].connected = status;
         }
       }
       this.setState({
-        usernames
+        deviceNames
       })
     }
     return func;
   }
 
   onLogout = async () => {
-    const naviParams = this.props.navigation.state.params;    
-    SocketConnector.emit('disconnect', naviParams.username);    
+    const naviParams = this.props.navigation.state.params;
+    SocketConnector.emit('unregister', naviParams.username);
+    //SocketConnector.emit('disconnect', naviParams.username);    
     const body = this.state;    
     let res = await fetch(`${AppConstants.SERVER_URL}/api/auth/logout/`, {
       headers: {
@@ -87,11 +88,11 @@ class UserListScreen extends Component {
         </View>
         <View style={[styles.main, styles.alignCenter]}>
           <FlatList
-            data={this.state.usernames.filter(user => user.username != this.state.username)
-              .map((user, i) => {
+            data={this.state.deviceNames
+              .map((device, i) => {
                 const item = {
-                  "name": user.username,
-                  "connected": user.connected,
+                  "name": device.deviceId,
+                  "connected": device.connected,
                   "key": i};
                 return item;})}
             renderItem={({item}) => (

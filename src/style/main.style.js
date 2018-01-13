@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     margin: 10,    
     borderRadius: 12,
     alignItems: 'center',
-    flex: 1
+    flex: 3
   },
   youText: {
     backgroundColor: 'white',
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     margin: 10,    
     borderRadius: 12,
     alignItems: 'center',
-    flex: 1
+    flex: 3
   }
 });
 

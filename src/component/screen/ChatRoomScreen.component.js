@@ -11,6 +11,7 @@ import {
 import styles from "src/style/main.style.js";
 import EmptyDOM from "src/component/EmptyDOM.component.js";
 import AppConstants from 'src/constant/AppConstants.constant.js';
+import ChatBot from 'src/utility/ChatBot.js';
 
 if (typeof global.self === "undefined") {
   global.self = global;
@@ -25,12 +26,13 @@ class ChatRoomScreen extends Component {
       content: "",
       messages: []
     };
-
   }
 
   componentDidMount = async () => {
     this.socket = this.props.navigation.state.params.SocketConnector;    
-    this.socket.on('message', this.onReceivedMessage);
+    this.socket.on('message', this.onReceiveMessage);
+    this.socket.on('recognization', this.onReceiveRecogResult);
+    this.socket.on('delivery', this.onReceiveRecogResult);
     const naviParams = this.props.navigation.state.params;
     let me = naviParams.me;
     let you = naviParams.you;
@@ -38,19 +40,44 @@ class ChatRoomScreen extends Component {
       me,
       you,
     });
-    let res = await fetch(`${AppConstants.SERVER_URL}/api/message/${me}/${you}`);
-    let messages = await res.json();
-    this.setState({
-      messages
-    })
+    console.log(me);
+    let res = await fetch(`${AppConstants.SERVER_URL}/api/user/${me}`);
+    let user = await res.json();
+    console.log(user.prescription);
+    let content = "";
+    content += "you can register your face through the following command: \n";
+    content += "\'/register\'\n";
+    content += "you can set your prescription through the following command: \n";
+    content += "to set the time and amount drugs should be taken, type: \n";
+    content += "\'/setdrug [drug name], [taken time], [amount]\'\n";
+    content += "to remove certain prescription, type: \n";
+    content += "\'/deldrug [drug name], [taken time]\'";
+    if (user.prescription.length > 0) {    
+      content += "prescription: \n";
+      content += user.prescription.map(instruction => {
+        const drug = instruction["drug"];
+        const time = instruction["time"];
+        const hour = new Date(time).getHours();
+        const amount = instruction["amount"];
+        return [drug, hour, amount].join(" ");
+      }).join("\n");
+    }
+    this.sendMessage(content, this.state.you, this.state.me);
+    res = await fetch(`${AppConstants.SERVER_URL}/api/drugs`);
+    let drugs = await res.json();
+    drugs = drugs.map(drug => drug["drugname"]);
+    this.chatbot = new ChatBot(drugs);
+    for (let instruction in user.prescription) {
+      const key = [instruction["drug"], instruction["time"]].join(",");
+      this.chatbot.instructions[key] = instruction["amount"];
+    }
   };
 
   static navigationOptions = {
     header: null
   };
 
-  onReceivedMessage = (message) => {
-    console.log(message);
+  onReceiveMessage = (message) => {
     let youSend = message.you === this.state.me && message.me === this.state.you;
     let meSend = message.me === this.state.me && message.you === this.state.you;    
     if (youSend || meSend) {
@@ -62,24 +89,87 @@ class ChatRoomScreen extends Component {
     }
   }
 
+  onReceiveRecogResult = (result) => {
+    let content = '';
+    if (result === 'success') {
+      content = 'recognition success! sendind drug delivery signals to arduino ...';
+    } else {
+      content = 'recognition failed! please try again ...';
+    }
+    this.sendMessage(content, this.state.you, this.state.me);    
+  }
+
+  onReceiveDeliveryResult = (result) => {
+    let content = '';
+    if (result === 'success') {
+      content = 'delivery success! delivering drugs ...';
+    } else {
+      content = 'failed to connect to arduino! please try again ...';
+    }
+    this.sendMessage(content, this.state.you, this.state.me);    
+  }
+
+  sendMessage = (content, me, you) => {
+    let now = new Date();
+    let message = {
+      me,
+      you,
+      content,
+      time: now.getTime() 
+    }
+    this.socket.emit('message', message);
+    return message;
+  } 
+  sendPrescription = (prescription) => {
+    let user = {
+      "username": this.state.me,
+      prescription
+    }
+    this.socket.emit('putUser', user);
+  }
+
+  register = () => {
+    const deviceId = this.state.you;
+    const username = this.state.me;
+    const info = {
+      deviceId,
+      username
+    }
+    this.socket.emit('register', info);    
+  }
+
   onSubmit = () => {
     let content = this.state.content;
     content = content.trim();
     if (content === "")
       return;
-    let messages = this.state.messages;
-    let now = new Date();
-    let message = {
-      me: this.state.me,
-      you: this.state.you,
-      content,
-      time: now.getTime() 
-    }
-    //messages.push(message);
-    this.socket.emit('message', message);    
+    const message = this.sendMessage(content, this.state.me, this.state.you);    
     this.setState({
       content: ""
     });
+    this.chatBotReply(message);
+  }
+
+  chatBotReply = (message) => {
+    const reply = this.chatbot.reply(message.content);
+    this.sendMessage(reply["message"], this.state.you, this.state.me);
+    const doDrug = () => {
+      const prescription = this.chatbot.getPrescription();
+      console.log(prescription);
+      this.sendPrescription(prescription);
+    };
+    switch (reply["action"]) {
+      case "setDrug":
+        doDrug();
+        break;
+      case "delDrug":
+        doDrug();
+        break;
+      case "register":
+        this.register();
+        break;
+    }
+   
   }
 
   _keyExtractor = message => message.time;
@@ -101,13 +191,13 @@ class ChatRoomScreen extends Component {
           data={this.state.messages}
           renderItem={({item}) => (
           <View style={{flexDirection: 'row'}}>
-            {this.state.me === item.me ? <View style={{flex: 2}} /> : null}
+            {this.state.me === item.me ? <View style={{flex: 1}} /> : null}
             <View
               style={this.state.me === item.me ? styles.meText : styles.youText}
               key={item.time}>
               <Text>{item.content}</Text>
             </View>
-            {this.state.me === item.me ? null : <View style={{flex: 2}} /> }
+            {this.state.me === item.me ? null : <View style={{flex: 1}} /> }
           </View>)}
           keyExtractor={this._keyExtractor}
           ref={ref => this.scrollView = ref}
@@ -126,6 +216,8 @@ class ChatRoomScreen extends Component {
             }}
             value={this.state.content}
             onSubmitEditing={this.onSubmit}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
         </View>
       </View>
